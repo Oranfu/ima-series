@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="הסדרות שלי">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#5b3cc4">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>הסדרות שלי</title>
+<style>
+  :root{
+    --bg:#f6f3ff; --card:#fff; --ink:#1d1b2e; --muted:#5d5a73;
+    --main:#5b3cc4; --main-dark:#432a9a; --ok:#1a7f4b; --danger:#b3261e; --line:#d9d3f0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"SF Hebrew","Arial Hebrew",Arial,sans-serif;
+    font-size:22px; line-height:1.4;
+    padding:env(safe-area-inset-top) 16px calc(40px + env(safe-area-inset-bottom));
+  }
+  header{padding:18px 0 8px}
+  h1{margin:0;font-size:34px;color:var(--main-dark)}
+  .sub{color:var(--muted);font-size:20px;margin-top:2px}
+  button{
+    font:inherit; font-weight:700; border:0; border-radius:16px;
+    padding:16px 20px; min-height:60px; cursor:pointer; color:#fff; background:var(--main);
+    width:100%;
+  }
+  button:active{transform:scale(.98);background:var(--main-dark)}
+  button.sec{background:#fff;color:var(--main-dark);border:2px solid var(--main)}
+  button.green{background:var(--ok)}
+  button.red{background:#fff;color:var(--danger);border:2px solid var(--danger)}
+  button.small{min-height:48px;font-size:18px;padding:10px 14px;width:auto}
+  .card{
+    background:var(--card); border-radius:20px; padding:14px; margin:16px 0;
+    box-shadow:0 2px 10px rgba(60,40,140,.12);
+  }
+  .row{display:flex;gap:14px;align-items:flex-start}
+  .thumb{
+    width:92px;height:130px;flex:none;border-radius:12px;background:#e7e1fa;object-fit:cover;
+    display:flex;align-items:center;justify-content:center;font-size:40px;overflow:hidden;
+  }
+  .info{flex:1;min-width:0}
+  .name{font-size:27px;font-weight:800;word-break:break-word;direction:auto;text-align:start}
+  .where{font-size:24px;margin:6px 0;color:var(--main-dark);font-weight:700}
+  .tag{display:inline-block;background:#ece7ff;color:var(--main-dark);border-radius:999px;padding:2px 12px;font-size:18px;font-weight:700}
+  .btns{display:flex;gap:10px;margin-top:12px}
+  .btns button{flex:1}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:24px}
+  /* sheets */
+  .overlay{position:fixed;inset:0;background:rgba(20,10,60,.55);display:none;z-index:10}
+  .overlay.on{display:block}
+  .sheet{
+    position:absolute;inset:auto 0 0 0;max-height:94vh;overflow:auto;background:var(--bg);
+    border-radius:26px 26px 0 0;padding:20px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .sheet h2{margin:0 0 12px;font-size:30px;color:var(--main-dark)}
+  label.lbl{display:block;font-weight:700;margin:16px 0 6px;font-size:22px}
+  input[type=text],textarea{
+    width:100%;font:inherit;padding:14px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);
+    direction:auto;
+  }
+  .stepper{display:flex;align-items:center;gap:12px}
+  .stepper button{width:72px;flex:none;font-size:36px;padding:0;min-height:72px}
+  .stepper .val{flex:1;text-align:center;font-size:40px;font-weight:800;color:var(--main-dark)}
+  .stepper .of{display:block;font-size:18px;font-weight:400;color:var(--muted)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{
+    width:auto;flex:1;min-width:90px;background:#fff;color:var(--main-dark);border:2px solid var(--line);
+    font-size:21px;padding:12px;min-height:56px;
+  }
+  .chip.on{background:var(--main);color:#fff;border-color:var(--main)}
+  .result{display:flex;gap:12px;align-items:center;background:#fff;border-radius:16px;padding:10px;margin:10px 0;border:2px solid transparent}
+  .result:active{border-color:var(--main)}
+  .result .thumb{width:60px;height:86px;font-size:26px}
+  .result .nm{font-size:23px;font-weight:700;direction:auto;text-align:start}
+  .result .yr{font-size:18px;color:var(--muted)}
+  .msg{color:var(--muted);text-align:center;padding:14px;font-size:21px}
+  .foot{text-align:center;margin-top:30px}
+  .foot a{color:var(--muted);font-size:18px;text-decoration:underline;cursor:pointer}
+  .gap{height:12px}
+  .banner{border-radius:14px;padding:10px 12px;margin:8px 0;font-size:22px;font-weight:800}
+  .banner.wait{background:#fff4d6;color:#7a5200}
+  .banner.done{background:#dcf5e7;color:var(--ok)}
+  .banner.new{background:#ffe3ec;color:#a3124a}
+  .next{font-size:20px;color:var(--muted)}
+  #toast{position:fixed;left:16px;right:16px;bottom:calc(24px + env(safe-area-inset-bottom));background:#1d1b2e;color:#fff;
+    border-radius:18px;padding:18px;font-size:23px;font-weight:700;text-align:center;z-index:30;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>📺 הסדרות שלי</h1>
+  <div class="sub">כאן רואים עד איפה הגעתי בכל סדרה</div>
+</header>
+
+<button id="addBtn" class="green">➕ הוספת סדרה חדשה</button>
+<div id="list"></div>
+<div id="toast"></div>
+<div class="foot"><a id="backupLink">גיבוי ושחזור</a></div>
+
+<!-- Add sheet -->
+<div class="overlay" id="addOv"><div class="sheet">
+  <h2>הוספת סדרה</h2>
+  <label class="lbl" for="q">שם הסדרה (עדיף באנגלית, כמו בנטפליקס)</label>
+  <input type="text" id="q" placeholder="למשל: Fauda" autocomplete="off" autocapitalize="off" enterkeyhint="search">
+  <div class="gap"></div>
+  <button id="searchBtn">🔍 חיפוש</button>
+  <div id="results"></div>
+  <div class="gap"></div>
+  <button class="sec" id="manualBtn">הוספה עם השם שהקלדתי (בלי תמונה)</button>
+  <div class="gap"></div>
+  <button class="sec" data-close="addOv">סגירה</button>
+</div></div>
+
+<!-- Edit sheet -->
+<div class="overlay" id="editOv"><div class="sheet">
+  <h2 id="eTitle"></h2>
+  <label class="lbl">עונה</label>
+  <div class="stepper">
+    <button id="sPlus">+</button>
+    <div class="val" id="sVal">1</div>
+    <button id="sMinus" class="sec">−</button>
+  </div>
+  <label class="lbl">פרק (ראיתי עד פרק...)</label>
+  <div class="stepper">
+    <button id="ePlus">+</button>
+    <div class="val" id="eVal">0</div>
+    <button id="eMinus" class="sec">−</button>
+  </div>
+  <label class="lbl">איפה רואים?</label>
+  <div class="chips" id="plat">
+    <button class="chip" data-p="Netflix">Netflix</button>
+    <button class="chip" data-p="yes">yes</button>
+    <button class="chip" data-p="אחר">אחר</button>
+  </div>
+  <div class="gap"></div><div class="gap"></div>
+  <button class="green" id="saveBtn">✔ שמירה</button>
+  <div class="gap"></div>
+  <button class="red" id="delBtn">🗑 מחיקת הסדרה</button>
+</div></div>
+
+<!-- Backup sheet -->
+<div class="overlay" id="bkOv"><div class="sheet">
+  <h2>גיבוי ושחזור</h2>
+  <div class="sub">למי שעוזר/ת: אפשר להעתיק את הטקסט הזה ולשמור אותו (למשל בהודעה לעצמך). אם הנתונים נמחקים, מדביקים אותו חזרה ולוחצים שחזור.</div>
+  <label class="lbl">הנתונים שלי</label>
+  <textarea id="bkText" rows="7"></textarea>
+  <div class="gap"></div>
+  <button id="bkCopy">העתקה</button>
+  <div class="gap"></div>
+  <button class="sec" id="bkRestore">שחזור מהטקסט שהדבקתי</button>
+  <div class="gap"></div>
+  <button class="sec" data-close="bkOv">סגירה</button>
+</div></div>
+
+<script>
+(function(){
+  var KEY = 'my-series-v1';
+  var shows = load();
+  var editing = null; // show being edited
+  var draft = null;
+
+  function load(){
+    try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; }
+    catch(e){ return []; }
+  }
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(shows)); } catch(e){}
+  }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function seasonMax(s){ return s.eps && s.eps[s.season] ? s.eps[s.season] : 0; }
+  function seasonCount(s){ return s.eps ? Object.keys(s.eps).length : 0; }
+  function hasNext(s){ return !!(s.eps && s.eps[s.season+1]); }
+  function atEnd(s){ var m = seasonMax(s); return !!(m && s.episode >= m && !hasNext(s)); }
+  // when a season is finished and the next one exists, move to its beginning
+  function normalize(s){
+    var m = seasonMax(s);
+    if (m && s.episode >= m && hasNext(s)){ s.season++; s.episode = 0; return true; }
+    return false;
+  }
+  function fmtDate(d){ var p = String(d).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d; }
+  function toast(t){
+    var el = $('toast'); el.textContent = t; el.style.display = 'block';
+    clearTimeout(toast.t); toast.t = setTimeout(function(){ el.style.display = 'none'; }, 3500);
+  }
+
+  function render(){
+    var box = $('list');
+    if (!shows.length){
+      box.innerHTML = '<div class="empty">עוד אין סדרות.<br>לוחצים על הכפתור הירוק כדי להוסיף את הסדרה הראשונה 👆</div>';
+      return;
+    }
+    var sorted = shows.slice().sort(function(a,b){ return (b.updated||0) - (a.updated||0); });
+    box.innerHTML = sorted.map(function(s){
+      var img = s.img ? '<img class="thumb" src="'+esc(s.img)+'" alt="">' : '<div class="thumb">📺</div>';
+      var where, next = '', banner = '', main;
+      if (atEnd(s)){
+        where = 'ראיתי הכול עד עונה ' + s.season + ' · פרק ' + s.episode;
+        if (s.status === 'Ended') banner = '<div class="banner done">🎉 הסדרה הסתיימה, ראיתי את כולה</div>';
+        else banner = '<div class="banner wait">⏳ ממתינה לעונה חדשה' + (s.nextAir ? '<br><span style="font-weight:400;font-size:19px">צפויה ב־' + esc(fmtDate(s.nextAir)) + '</span>' : '') + '</div>';
+        main = '';
+      } else {
+        if (!s.episode){
+          if (s.season <= 1) where = 'עוד לא התחלתי לראות';
+          else { where = 'סיימתי את עונה ' + (s.season-1) + ' ✔'; }
+          next = '<div class="next">הבא: עונה ' + s.season + ' · פרק 1</div>';
+        } else {
+          where = 'ראיתי עד: עונה ' + s.season + ' · פרק ' + s.episode;
+          next = '<div class="next">הבא: פרק ' + (s.episode+1) + '</div>';
+        }
+        if (s.newFlag) banner = '<div class="banner new">🆕 יצאה עונה חדשה!</div>';
+        main = '<button data-act="plus" data-id="'+s.id+'">✔ ראיתי עוד פרק</button>';
+      }
+      return '<div class="card"><div class="row">'+img+'<div class="info">'+
+        '<div class="name">'+esc(s.name)+'</div>'+
+        '<div class="where">'+esc(where)+'</div>'+ next +
+        (s.platform ? '<span class="tag">'+esc(s.platform)+'</span>' : '')+
+        '</div></div>'+ banner +'<div class="btns">'+main+
+        '<button class="sec" data-act="edit" data-id="'+s.id+'">✏️ שינוי</button></div></div>';
+    }).join('');
+  }
+
+  function byId(id){ for (var i=0;i<shows.length;i++) if (String(shows[i].id)===String(id)) return shows[i]; return null; }
+
+  $('list').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-act]'); if (!b) return;
+    var s = byId(b.getAttribute('data-id')); if (!s) return;
+    var act = b.getAttribute('data-act');
+    if (act === 'plus'){
+      var prev = s.season;
+      s.episode = (s.episode||0) + 1; s.newFlag = false; s.updated = Date.now();
+      var moved = normalize(s);
+      save(); render();
+      if (moved) toast('כל הכבוד! סיימת את עונה ' + prev + ' 🎉');
+      else if (atEnd(s)) toast(s.status === 'Ended' ? 'סיימת את כל הסדרה! 🎉' : 'סיימת את כל הפרקים שיצאו 👏');
+    }
+    else if (act === 'edit'){ openEdit(s); }
+  });
+
+  /* ---------- sheets ---------- */
+  function open(id){ $(id).classList.add('on'); }
+  function close(id){ $(id).classList.remove('on'); }
+  document.addEventListener('click', function(e){
+    var c = e.target.closest('[data-close]'); if (c) close(c.getAttribute('data-close'));
+  });
+
+  /* ---------- edit ---------- */
+  function openEdit(s){
+    editing = s;
+    draft = {season: s.season||1, episode: s.episode||0, platform: s.platform||''};
+    $('eTitle').textContent = s.name;
+    paintEdit(); open('editOv');
+  }
+  function paintEdit(){
+    var s = editing;
+    $('sVal').innerHTML = draft.season + (s.eps && seasonCount(s) ? '<span class="of">מתוך '+seasonCount(s)+' עונות</span>' : '');
+    var max = s.eps && s.eps[draft.season];
+    $('eVal').innerHTML = (draft.episode || 0) + (max ? '<span class="of">מתוך '+max+' פרקים</span>' : '');
+    var chips = document.querySelectorAll('#plat .chip');
+    for (var i=0;i<chips.length;i++){
+      chips[i].classList.toggle('on', chips[i].getAttribute('data-p') === draft.platform);
+    }
+  }
+  $('sPlus').onclick = function(){
+    var n = seasonCount(editing);
+    if (n && draft.season >= n) return;
+    draft.season++; draft.episode = 0; paintEdit();
+  };
+  $('sMinus').onclick = function(){ if (draft.season > 1){ draft.season--; draft.episode = 0; paintEdit(); } };
+  $('ePlus').onclick = function(){
+    var max = editing.eps && editing.eps[draft.season];
+    if (max && draft.episode >= max) return;
+    draft.episode++; paintEdit();
+  };
+  $('eMinus').onclick = function(){ if (draft.episode > 0){ draft.episode--; paintEdit(); } };
+  $('plat').addEventListener('click', function(e){
+    var b = e.target.closest('.chip'); if (!b) return;
+    var p = b.getAttribute('data-p');
+    draft.platform = draft.platform === p ? '' : p; paintEdit();
+  });
+  $('saveBtn').onclick = function(){
+    editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
+    editing.newFlag = false; normalize(editing); editing.updated = Date.now(); save(); render(); close('editOv');
+  };
+  $('delBtn').onclick = function(){
+    if (confirm('למחוק את "' + editing.name + '" מהרשימה?')){
+      shows = shows.filter(function(x){ return x !== editing; });
+      save(); render(); close('editOv');
+    }
+  };
+
+  /* ---------- add ---------- */
+  $('addBtn').onclick = function(){ $('q').value=''; $('results').innerHTML=''; open('addOv'); setTimeout(function(){ $('q').focus(); }, 300); };
+  $('q').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); doSearch(); } });
+  $('searchBtn').onclick = doSearch;
+
+  function doSearch(){
+    var q = $('q').value.trim(); if (!q) return;
+    $('q').blur();
+    var out = $('results'); out.innerHTML = '<div class="msg">מחפש...</div>';
+    fetch('https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(q))
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(arr){
+        if (!arr.length){ out.innerHTML = '<div class="msg">לא נמצאה סדרה. אפשר לנסות שם אחר באנגלית, או ללחוץ על "הוספה עם השם שהקלדתי".</div>'; return; }
+        window.__res = arr.slice(0, 8).map(function(x){ return x.show; });
+        out.innerHTML = window.__res.map(function(sh, i){
+          var im = sh.image && (sh.image.medium || sh.image.original);
+          if (im) im = im.replace('http://','https://');
+          var yr = sh.premiered ? sh.premiered.slice(0,4) : '';
+          return '<div class="result" data-i="'+i+'">'+
+            (im ? '<img class="thumb" src="'+esc(im)+'" alt="">' : '<div class="thumb">📺</div>')+
+            '<div><div class="nm">'+esc(sh.name)+'</div><div class="yr">'+esc(yr)+'</div></div></div>';
+        }).join('');
+      })
+      .catch(function(){ out.innerHTML = '<div class="msg">אין חיבור לאינטרנט, או שהחיפוש לא עבד. אפשר לנסות שוב.</div>'; });
+  }
+  $('results').addEventListener('click', function(e){
+    var r = e.target.closest('.result'); if (!r) return;
+    var sh = window.__res[+r.getAttribute('data-i')];
+    var im = sh.image && (sh.image.medium || sh.image.original);
+    if (im) im = im.replace('http://','https://');
+    addShow(sh.name, im || '', sh.id);
+  });
+  $('manualBtn').onclick = function(){
+    var q = $('q').value.trim();
+    if (!q){ $('results').innerHTML = '<div class="msg">קודם מקלידים את שם הסדרה למעלה.</div>'; return; }
+    addShow(q, '', null);
+  };
+
+  function addShow(name, img, tvmazeId){
+    var s = {id: Date.now(), name: name, img: img, tvmazeId: tvmazeId, season: 1, episode: 0, platform: '', updated: Date.now(), eps: null};
+    shows.push(s); save(); render(); close('addOv'); openEdit(s);
+    if (tvmazeId) loadInfo(s, function(){ if ($('editOv').classList.contains('on') && editing === s) paintEdit(); });
+  }
+
+  // loads seasons/episodes (only ones already aired), show status and next air date
+  function loadInfo(s, cb){
+    fetch('https://api.tvmaze.com/shows/' + s.tvmazeId + '?embed=episodes')
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(sh){
+        var list = (sh._embedded && sh._embedded.episodes) || [];
+        var today = new Date().toISOString().slice(0,10);
+        var eps = {}, nextAir = '';
+        list.forEach(function(ep){
+          if (!ep.season || !ep.number) return;
+          if (ep.airdate && ep.airdate <= today){ eps[ep.season] = Math.max(eps[ep.season]||0, ep.number); }
+          else if (ep.airdate && (!nextAir || ep.airdate < nextAir)){ nextAir = ep.airdate; }
+        });
+        var wasEnd = atEnd(s);
+        s.eps = eps; s.status = sh.status || ''; s.nextAir = nextAir; s.checked = Date.now();
+        if (!s.img && sh.image){ s.img = (sh.image.medium || sh.image.original || '').replace('http://','https://'); }
+        if (normalize(s) && wasEnd){ s.newFlag = true; }
+        save(); render(); if (cb) cb();
+      }).catch(function(){});
+  }
+  // on every open: re-check shows that may have new seasons
+  function refreshAll(){
+    shows.forEach(function(s){
+      if (!s.tvmazeId || s.status === 'Ended') return;
+      if (s.checked && Date.now() - s.checked < 6*3600*1000) return;
+      loadInfo(s);
+    });
+  }
+
+  /* ---------- backup ---------- */
+  $('backupLink').onclick = function(){ $('bkText').value = JSON.stringify(shows); open('bkOv'); };
+  $('bkCopy').onclick = function(){
+    var t = $('bkText'); t.select(); t.setSelectionRange(0, 999999);
+    try { document.execCommand('copy'); alert('הועתק'); } catch(e){}
+  };
+  $('bkRestore').onclick = function(){
+    try {
+      var a = JSON.parse($('bkText').value);
+      if (!Array.isArray(a)) throw 0;
+      if (!confirm('לשחזר? הרשימה הנוכחית תוחלף.')) return;
+      shows = a; save(); render(); close('bkOv');
+    } catch(e){ alert('הטקסט לא תקין'); }
+  };
+
+  shows.forEach(normalize); render(); refreshAll();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+})();
+</script>
+</body>
+</html>
