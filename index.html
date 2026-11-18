@@ -86,6 +86,9 @@
   .foot{text-align:center;margin-top:30px}
   .foot a{color:var(--muted);font-size:18px;text-decoration:underline;cursor:pointer}
   .gap{height:12px}
+  .tabs{display:flex;gap:10px;margin:16px 0 0}
+  .tabs button{background:#fff;color:var(--main-dark);border:2px solid var(--line);font-size:21px;padding:12px 6px;min-height:60px}
+  .tabs button.on{background:var(--main);color:#fff;border-color:var(--main)}
   .banner{border-radius:14px;padding:10px 12px;margin:8px 0;font-size:22px;font-weight:800}
   .banner.wait{background:#fff4d6;color:#7a5200}
   .banner.done{background:#dcf5e7;color:var(--ok)}
@@ -102,6 +105,7 @@
 </header>
 
 <button id="addBtn" class="green">➕ הוספת סדרה חדשה</button>
+<div class="tabs"><button id="tabWatch" class="on"></button><button id="tabDone"></button></div>
 <div id="list"></div>
 <div id="toast"></div>
 <div class="foot"><a id="backupLink">גיבוי ושחזור</a></div>
@@ -143,6 +147,8 @@
   </div>
   <div class="gap"></div><div class="gap"></div>
   <button class="green" id="saveBtn">✔ שמירה</button>
+  <div class="gap"></div>
+  <button class="sec" id="pauseBtn"></button>
   <div class="gap"></div>
   <button class="red" id="delBtn">🗑 מחיקת הסדרה</button>
 </div></div>
@@ -191,6 +197,10 @@
     if (m && s.episode >= m && hasNext(s)){ s.season++; s.episode = 0; return true; }
     return false;
   }
+  var tab = 'watch';
+  function inactive(s){ return !!s.paused || atEnd(s); }
+  $('tabWatch').onclick = function(){ tab = 'watch'; render(); };
+  $('tabDone').onclick = function(){ tab = 'done'; render(); };
   function fmtDate(d){ var p = String(d).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d; }
   function toast(t){
     var el = $('toast'); el.textContent = t; el.style.display = 'block';
@@ -199,15 +209,29 @@
 
   function render(){
     var box = $('list');
-    if (!shows.length){
-      box.innerHTML = '<div class="empty">עוד אין סדרות.<br>לוחצים על הכפתור הירוק כדי להוסיף את הסדרה הראשונה 👆</div>';
+    var nWatch = shows.filter(function(s){ return !inactive(s); }).length;
+    var nDone = shows.length - nWatch;
+    $('tabWatch').textContent = '📺 צופה עכשיו (' + nWatch + ')';
+    $('tabDone').textContent = '✔ סיימתי / לא צופה (' + nDone + ')';
+    $('tabWatch').classList.toggle('on', tab === 'watch');
+    $('tabDone').classList.toggle('on', tab === 'done');
+    var visible = shows.filter(function(s){ return (tab === 'done') === inactive(s); });
+    if (!visible.length){
+      box.innerHTML = tab === 'done'
+        ? '<div class="empty">כאן יופיעו סדרות שסיימתי, או שממתינות לעונה חדשה, או שהפסקתי לצפות בהן.</div>'
+        : (shows.length ? '<div class="empty">אין כרגע סדרות שאת צופה בהן.<br>אפשר להוסיף סדרה חדשה 👆</div>'
+                        : '<div class="empty">עוד אין סדרות.<br>לוחצים על הכפתור הירוק כדי להוסיף את הסדרה הראשונה 👆</div>');
       return;
     }
-    var sorted = shows.slice().sort(function(a,b){ return (b.updated||0) - (a.updated||0); });
+    var sorted = visible.slice().sort(function(a,b){ return (b.updated||0) - (a.updated||0); });
     box.innerHTML = sorted.map(function(s){
       var img = s.img ? '<img class="thumb" src="'+esc(s.img)+'" alt="">' : '<div class="thumb">📺</div>';
       var where, next = '', banner = '', main;
-      if (atEnd(s)){
+      if (s.paused && !atEnd(s)){
+        where = s.episode ? 'עצרתי בעונה ' + s.season + ' · פרק ' + s.episode : 'עוד לא התחלתי';
+        banner = '<div class="banner wait">⏸ לא צופה כרגע</div>';
+        main = '<button class="green" data-act="resume" data-id="'+s.id+'">▶ חזרה לצפייה</button>';
+      } else if (atEnd(s)){
         where = 'ראיתי הכול עד עונה ' + s.season + ' · פרק ' + s.episode;
         if (s.status === 'Ended') banner = '<div class="banner done">🎉 הסדרה הסתיימה, ראיתי את כולה</div>';
         else banner = '<div class="banner wait">⏳ ממתינה לעונה חדשה' + (s.nextAir ? '<br><span style="font-weight:400;font-size:19px">צפויה ב־' + esc(fmtDate(s.nextAir)) + '</span>' : '') + '</div>';
@@ -247,6 +271,7 @@
       if (moved) toast('כל הכבוד! סיימת את עונה ' + prev + ' 🎉');
       else if (atEnd(s)) toast(s.status === 'Ended' ? 'סיימת את כל הסדרה! 🎉' : 'סיימת את כל הפרקים שיצאו 👏');
     }
+    else if (act === 'resume'){ s.paused = false; s.updated = Date.now(); save(); tab = 'watch'; render(); toast('הסדרה חזרה לרשימה של "צופה עכשיו"'); }
     else if (act === 'edit'){ openEdit(s); }
   });
 
@@ -262,6 +287,7 @@
     editing = s;
     draft = {season: s.season||1, episode: s.episode||0, platform: s.platform||''};
     $('eTitle').textContent = s.name;
+    $('pauseBtn').textContent = s.paused ? '▶ חזרה ל"צופה עכשיו"' : '⏸ לא צופה כרגע (העבר לטאב השני)';
     paintEdit(); open('editOv');
   }
   function paintEdit(){
@@ -294,6 +320,12 @@
   $('saveBtn').onclick = function(){
     editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
     editing.newFlag = false; normalize(editing); editing.updated = Date.now(); save(); render(); close('editOv');
+  };
+  $('pauseBtn').onclick = function(){
+    editing.paused = !editing.paused; editing.updated = Date.now();
+    editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
+    save(); render(); close('editOv');
+    toast(editing.paused ? 'הסדרה עברה ל"סיימתי / לא צופה"' : 'הסדרה חזרה ל"צופה עכשיו"');
   };
   $('delBtn').onclick = function(){
     if (confirm('למחוק את "' + editing.name + '" מהרשימה?')){
