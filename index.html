@@ -86,6 +86,8 @@
   .foot{text-align:center;margin-top:30px}
   .foot a{color:var(--muted);font-size:18px;text-decoration:underline;cursor:pointer}
   .gap{height:12px}
+  #toast button{width:auto;min-height:48px;padding:8px 18px;margin-top:10px;background:#fff;color:var(--main-dark);font-size:21px}
+  button.undo{margin-top:10px;background:#fff;color:var(--danger);border:2px solid var(--danger);min-height:52px;font-size:20px}
   .tabs{display:flex;gap:10px;margin:16px 0 0}
   .tabs button{background:#fff;color:var(--main-dark);border:2px solid var(--line);font-size:21px;padding:12px 6px;min-height:60px}
   .tabs button.on{background:var(--main);color:#fff;border-color:var(--main)}
@@ -153,6 +155,16 @@
   <button class="red" id="delBtn">🗑 מחיקת הסדרה</button>
 </div></div>
 
+<!-- Pause sheet -->
+<div class="overlay" id="pauseOv"><div class="sheet">
+  <h2>למה לא צופה?</h2>
+  <button id="pBoring">😴 הפסקתי, זה משעמם</button>
+  <div class="gap"></div>
+  <button class="sec" id="pOther">⏸ סתם לא צופה כרגע</button>
+  <div class="gap"></div>
+  <button class="sec" data-close="pauseOv">ביטול</button>
+</div></div>
+
 <!-- Backup sheet -->
 <div class="overlay" id="bkOv"><div class="sheet">
   <h2>גיבוי ושחזור</h2>
@@ -202,10 +214,25 @@
   $('tabWatch').onclick = function(){ tab = 'watch'; render(); };
   $('tabDone').onclick = function(){ tab = 'done'; render(); };
   function fmtDate(d){ var p = String(d).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d; }
-  function toast(t){
-    var el = $('toast'); el.textContent = t; el.style.display = 'block';
-    clearTimeout(toast.t); toast.t = setTimeout(function(){ el.style.display = 'none'; }, 3500);
+  function toast(t, undoId){
+    var el = $('toast'); el.textContent = t;
+    if (undoId){
+      el.appendChild(document.createElement('br'));
+      var b = document.createElement('button'); b.textContent = '↩ ביטול, לחצתי בטעות';
+      b.onclick = function(){ undoLast(byId(undoId)); };
+      el.appendChild(b);
+    }
+    el.style.display = 'block';
+    clearTimeout(toast.t); toast.t = setTimeout(function(){ el.style.display = 'none'; }, undoId ? 8000 : 3500);
   }
+  function undoValid(s){ return s.undo && s.undoAt && Date.now() - s.undoAt < 30*60*1000; }
+  function undoLast(s){
+    if (!s || !undoValid(s)) return;
+    s.season = s.undo.season; s.episode = s.undo.episode; s.newFlag = s.undo.newFlag;
+    s.undo = null; s.updated = Date.now(); save(); render();
+    $('toast').style.display = 'none';
+  }
+  function sortKey(n){ return String(n||'').toLowerCase().replace(/^(the|a|an)\s+/, ''); }
 
   function render(){
     var box = $('list');
@@ -223,13 +250,13 @@
                         : '<div class="empty">עוד אין סדרות.<br>לוחצים על הכפתור הירוק כדי להוסיף את הסדרה הראשונה 👆</div>');
       return;
     }
-    var sorted = visible.slice().sort(function(a,b){ return (b.updated||0) - (a.updated||0); });
+    var sorted = visible.slice().sort(function(a,b){ return sortKey(a.name).localeCompare(sortKey(b.name), 'he'); });
     box.innerHTML = sorted.map(function(s){
       var img = s.img ? '<img class="thumb" src="'+esc(s.img)+'" alt="">' : '<div class="thumb">📺</div>';
       var where, next = '', banner = '', main;
       if (s.paused && !atEnd(s)){
         where = s.episode ? 'עצרתי בעונה ' + s.season + ' · פרק ' + s.episode : 'עוד לא התחלתי';
-        banner = '<div class="banner wait">⏸ לא צופה כרגע</div>';
+        banner = s.pauseReason === 'boring' ? '<div class="banner wait">😴 הפסקתי, זה היה משעמם</div>' : '<div class="banner wait">⏸ לא צופה כרגע</div>';
         main = '<button class="green" data-act="resume" data-id="'+s.id+'">▶ חזרה לצפייה</button>';
       } else if (atEnd(s)){
         where = 'ראיתי הכול עד עונה ' + s.season + ' · פרק ' + s.episode;
@@ -253,7 +280,8 @@
         '<div class="where">'+esc(where)+'</div>'+ next +
         (s.platform ? '<span class="tag">'+esc(s.platform)+'</span>' : '')+
         '</div></div>'+ banner +'<div class="btns">'+main+
-        '<button class="sec" data-act="edit" data-id="'+s.id+'">✏️ שינוי</button></div></div>';
+        '<button class="sec" data-act="edit" data-id="'+s.id+'">✏️ שינוי</button></div>'+
+        (undoValid(s) ? '<button class="undo" data-act="undo" data-id="'+s.id+'">↩ ביטול הפרק האחרון (לחצתי בטעות)</button>' : '')+'</div>';
     }).join('');
   }
 
@@ -265,13 +293,16 @@
     var act = b.getAttribute('data-act');
     if (act === 'plus'){
       var prev = s.season;
+      s.undo = {season: s.season, episode: s.episode||0, newFlag: !!s.newFlag}; s.undoAt = Date.now();
       s.episode = (s.episode||0) + 1; s.newFlag = false; s.updated = Date.now();
       var moved = normalize(s);
       save(); render();
-      if (moved) toast('כל הכבוד! סיימת את עונה ' + prev + ' 🎉');
-      else if (atEnd(s)) toast(s.status === 'Ended' ? 'סיימת את כל הסדרה! 🎉' : 'סיימת את כל הפרקים שיצאו 👏');
+      if (moved) toast('כל הכבוד! סיימת את עונה ' + prev + ' 🎉', s.id);
+      else if (atEnd(s)) toast(s.status === 'Ended' ? 'סיימת את כל הסדרה! 🎉' : 'סיימת את כל הפרקים שיצאו 👏', s.id);
+      else toast('נרשם: פרק ' + s.episode + ' ✔', s.id);
     }
-    else if (act === 'resume'){ s.paused = false; s.updated = Date.now(); save(); tab = 'watch'; render(); toast('הסדרה חזרה לרשימה של "צופה עכשיו"'); }
+    else if (act === 'undo'){ undoLast(s); }
+    else if (act === 'resume'){ s.paused = false; s.pauseReason = ''; s.updated = Date.now(); save(); tab = 'watch'; render(); toast('הסדרה חזרה לרשימה של "צופה עכשיו"'); }
     else if (act === 'edit'){ openEdit(s); }
   });
 
@@ -319,14 +350,23 @@
   });
   $('saveBtn').onclick = function(){
     editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
-    editing.newFlag = false; normalize(editing); editing.updated = Date.now(); save(); render(); close('editOv');
+    editing.newFlag = false; editing.undo = null; normalize(editing); editing.updated = Date.now(); save(); render(); close('editOv');
   };
-  $('pauseBtn').onclick = function(){
-    editing.paused = !editing.paused; editing.updated = Date.now();
+  function setPaused(reason){
+    editing.paused = true; editing.pauseReason = reason; editing.updated = Date.now();
     editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
-    save(); render(); close('editOv');
-    toast(editing.paused ? 'הסדרה עברה ל"סיימתי / לא צופה"' : 'הסדרה חזרה ל"צופה עכשיו"');
+    editing.undo = null; save(); render(); close('pauseOv'); close('editOv');
+    toast('הסדרה עברה ל"סיימתי / לא צופה"');
+  }
+  $('pauseBtn').onclick = function(){
+    if (editing.paused){
+      editing.paused = false; editing.pauseReason = ''; editing.updated = Date.now();
+      editing.season = draft.season; editing.episode = draft.episode; editing.platform = draft.platform;
+      save(); render(); close('editOv'); toast('הסדרה חזרה ל"צופה עכשיו"');
+    } else open('pauseOv');
   };
+  $('pBoring').onclick = function(){ setPaused('boring'); };
+  $('pOther').onclick = function(){ setPaused(''); };
   $('delBtn').onclick = function(){
     if (confirm('למחוק את "' + editing.name + '" מהרשימה?')){
       shows = shows.filter(function(x){ return x !== editing; });
